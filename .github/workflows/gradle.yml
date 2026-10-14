@@ -30,7 +30,33 @@ jobs:
         run: |
           unzip -q ReactCamStudio-CloudBuild-Project-v2.zip -d extracted
           test -f extracted/reactcam/settings.gradle.kts
+      - name: Fix Java and Kotlin version mismatch
+        working-directory: extracted/reactcam
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
 
+          p = Path("app/build.gradle.kts")
+          s = p.read_text()
+
+          marker = "    defaultConfig {\n"
+          addition = """    compileOptions {
+              sourceCompatibility = JavaVersion.VERSION_17
+              targetCompatibility = JavaVersion.VERSION_17
+          }
+
+          kotlinOptions {
+              jvmTarget = "17"
+          }
+
+          """
+
+          if 'jvmTarget = "17"' not in s:
+              s = s.replace(marker, addition + marker, 1)
+              p.write_text(s)
+
+          print("Java and Kotlin targets configured.")
+          PY
       - name: Build Android APK
         working-directory: extracted/reactcam
         run: gradle --no-daemon assembleDebug
